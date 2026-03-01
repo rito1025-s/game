@@ -5,8 +5,8 @@ const ctx = canvas.getContext("2d");
 // --- ボールの設定 ---
 let x = canvas.width / 2;
 let y = canvas.height - 30;
-let dx = 4;
-let dy = -4;
+let dx = 2;
+let dy = -2;
 let ballRadius = 10;
 
 // --- パドルの設定 ---
@@ -24,8 +24,9 @@ let brickOffsetTop = 30;
 let brickOffsetLeft = 30;
 
 // --- ゲーム状態の設定 ---
-let score = 0; // スコア
-let lives = 3; // 残機
+let score = 0;
+let lives = 3;
+let isPaused = false; // ★一時停止フラグを追加
 
 let bricks = [];
 for (let c = 0; c < brickColumnCount; c++) {
@@ -35,13 +36,24 @@ for (let c = 0; c < brickColumnCount; c++) {
     }
 }
 
-// マウス移動のイベントリスナー
+// --- イベントリスナー ---
 document.addEventListener("mousemove", mouseMoveHandler, false);
+document.addEventListener("keydown", keyDownHandler, false); // ★キーボード入力を追加
 
 function mouseMoveHandler(e) {
     let relativeX = e.clientX - canvas.offsetLeft;
     if (relativeX > 0 && relativeX < canvas.width) {
         paddleX = relativeX - paddleWidth / 2;
+    }
+}
+
+// ★Pキーで一時停止する関数
+function keyDownHandler(e) {
+    if (e.key === "p" || e.key === "P") {
+        isPaused = !isPaused; // フラグを反転
+        if (!isPaused) {
+            draw(); // 再開時にゲームループを再起動
+        }
     }
 }
 
@@ -80,7 +92,6 @@ function drawBricks() {
     }
 }
 
-// --- 新機能: スコアと残機の描画 ---
 function drawScore() {
     ctx.font = "16px Arial";
     ctx.fillStyle = "#0095DD";
@@ -93,6 +104,14 @@ function drawLives() {
     ctx.fillText("Lives: " + lives, canvas.width - 65, 20);
 }
 
+// ★一時停止中のメッセージを表示する関数
+function drawPauseMessage() {
+    ctx.font = "30px Arial";
+    ctx.fillStyle = "red";
+    ctx.textAlign = "center";
+    ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2);
+}
+
 // --- 当たり判定（ブロック） ---
 function collisionDetection() {
     for (let c = 0; c < brickColumnCount; c++) {
@@ -102,9 +121,7 @@ function collisionDetection() {
                 if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
                     dy = -dy;
                     b.status = 0;
-                    score++; // ブロックを消したらスコアアップ
-                    
-                    // すべてのブロックを消したらクリア
+                    score++;
                     if (score == brickRowCount * brickColumnCount) {
                         alert("ゲームクリア！おめでとう！");
                         document.location.reload();
@@ -117,12 +134,18 @@ function collisionDetection() {
 
 // ゲームループ
 function draw() {
+    // ★停止中ならこれ以上処理を進めない
+    if (isPaused) {
+        drawPauseMessage();
+        return;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBricks();
     drawBall();
     drawPaddle();
-    drawScore(); // スコア表示
-    drawLives(); // 残機表示
+    drawScore();
+    drawLives();
     collisionDetection();
 
     // --- 当たり判定（壁・パドル） ---
@@ -135,17 +158,15 @@ function draw() {
         if (x > paddleX && x < paddleX + paddleWidth) {
             dy = -dy;
         } else {
-            // パドルを外れたら残機を減らす
             lives--;
             if (!lives) {
                 alert("ゲームオーバー");
                 document.location.reload();
             } else {
-                // ボールとパドルを初期位置に戻す
                 x = canvas.width / 2;
                 y = canvas.height - 30;
-                dx = 4;
-                dy = -4;
+                dx = 2;
+                dy = -2;
                 paddleX = (canvas.width - paddleWidth) / 2;
             }
         }
